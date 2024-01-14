@@ -2,18 +2,20 @@ import sqlite3 as sql
 
 conn = sql.connect(r'D:\AP\project\clinic\main.db')
 cur = conn.cursor()
+
 # Create table if it doesn't exist already
 cur.execute('''CREATE TABLE IF NOT EXISTS users(
             id INTEGER PRIMARY KEY, 
             name TEXT, 
             email TEXT, 
             password TEXT, 
-            role TEXT);
+            role TEXT,
+            status INTEGER);
         ''')
 
 cur.execute('DELETE FROM users;')    
-users = [(10,'arshia','arshia@gmail.com','Salam0011','patient'),(20,'parsa','parsa@gmail.com','strong','patient'),(30,'arash','arash@','password','staff'),(40,'mamad','@gmail.com','be to che','pashent'),(50,'sadra','sadra@gmail.com','ramz','staff')]
-cur.executemany("INSERT INTO users VALUES(?, ?, ?, ?, ?);", users)
+users = [(10,'arshia','arshia@gmail.com','Salam0011','patient',0),(20,'parsa','parsa@gmail.com','strong','patient',0),(30,'arash','arash@','password','staff',0),(40,'mamad','@gmail.com','be to che','pashent',0),(50,'sadra','sadra@gmail.com','ramz','staff',0)]
+cur.executemany("INSERT INTO users VALUES(?, ?, ?, ?, ?, ?);", users)
 conn.commit()
 
 class users:
@@ -29,6 +31,7 @@ class users:
     def sign_up(user_id,full_name,email,password,role):      
         #check if user exists or not
         cur.execute('''SELECT email FROM users;''')
+        conn.commit
         emails = [email[0] for email in cur.fetchall()]
         if email in emails:
             print("user already exists")
@@ -41,11 +44,54 @@ class users:
                         name,
                         email,
                         password,
-                        role) 
-                        VALUES(?,?,?,?,?);''',(user_id,full_name,email,password,role))
+                        role
+                        status) 
+                        VALUES(?,?,?,?,?);''',(user_id,full_name,email,password,role,0))
             conn.commit()
             print("user created successfully")
             return True
 
-    def login():
-        pass
+    def login(email,password):
+        cur.execute('''SELECT password FROM users WHERE email = ?''', (email,))
+        passwords = [row[0] for row in cur.fetchall()]
+        if password in passwords:
+            # Password matched, proceed with login
+            cur.execute('''UPDATE users SET status = 1 WHERE email = ?''',(email,))
+            conn.commit()
+            print('login was succesful')
+        else:
+            # Password did not match
+            print('Password did not match')
+
+    def update(full_name,email,password,role):
+        values=[]
+        if full_name != "":values.append((5,"name",full_name))
+        if email     != "":values.append((1,"email",email))
+        if password  !="":values.append((2,"password",password))
+        if role      !="" and role!=None:values.append((3,"role",role))
+        if len(values)==0:return None
+        query='''UPDATE users SET %s WHERE email=%s'''%(','.join(['%d=%s`']*len(values)),"'"+email+"'")
+        cur.execute(query,tuple([i[2] for i in values]))
+        conn.commit()
+        return 'Profile updated Successfully!'
+    
+    def logout(email):
+        cur.execute('''UPDATE users SET status = 0 WHERE email = ?''',(email,))
+        conn.commit()
+        print('User logged out')
+        
+    def get_info():
+        user_data=cur.fetchone()
+        data={}
+        data['status']    = user_data[4]
+        data['full_name'] = user_data[1]
+        data['email']     = user_data[2]
+        data['role']      = user_data[6]
+        return data
+    
+    def view_appointmant():
+        cur.execute("""select a.*,u.full_name from appointments as a
+                    join users u on u.id=a.doctor_id where a.patient
+                    =? order by date asc """,(users.get_info()["email"],))
+        
+    
