@@ -1,4 +1,7 @@
 import sqlite3 as sql
+import requests
+
+data = requests.get('http://127.0.0.1:5000/slots')
 
 conn = sql.connect(r'D:\AP\project\clinic\main.db')
 cur = conn.cursor()
@@ -94,4 +97,5 @@ class users:
                     join users u on u.id=a.doctor_id where a.patient
                     =? order by date asc """,(users.get_info()["email"],))
         
-    
+class clinic:
+    pass
