@@ -93,5 +93,21 @@ class users:
         cur.execute("""select a.*,u.full_name from appointments as a
                     join users u on u.id=a.doctor_id where a.patient
                     =? order by date asc """,(users.get_info()["email"],))
-        
+
+class Notification:
+    def init(self, notification_id, user_id, message, date_sent):
+
+        self.notification_id = notification_id
+        self.user_id = user_id
+        self.message = message
+        self.date_sent = date_sent
+
+    @classmethod
+    def send_notification(cls, user_id, message):
+        date_sent = datetime.now()
+        cur.execute('''INSERT INTO notification (user_id, message, date_sent)
+                              VALUES (?, ?, ?)''', (user_id, message, date_sent))
+        conn.commit()
+        print("Notification sent successfully.")
+
     
