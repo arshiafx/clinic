@@ -94,6 +94,140 @@ class users:
                     join users u on u.id=a.doctor_id where a.patient
                     =? order by date asc """,(users.get_info()["email"],))
 
+class clinic:
+    def __init__(self,clinic_id,name,address,phone_number,services,availability):
+        self.clinic_id    = clinic_id
+        self.name         = name
+        self.address      = address
+        self.phone_num    = phone_number
+        self.services     = services
+        self.availability = availability
+    
+    def create_new_clinic(clinic_id,name,address,phone_number,services,availability):
+        #check if clinic exists or not
+        cur.execute('''SELECT phone_number FROM clinics;''')
+        conn.commit
+        phone_numbers = [phone_number[0] for phone_number in cur.fetchall()]
+        if phone_number in phone_numbers:
+            print("clinic already exists")
+            return False
+
+        else:
+            cur.execute('''INSERT INTO clinics(
+                        id,
+                        name,
+                        address,
+                        phone_number,
+                        services,
+                        availability) 
+                        VALUES(?,?,?,?,?,?);''',(clinic_id,name,address,phone_number,services,availability))
+            conn.commit()
+            print("clinic created successfully")
+            return True  
+          
+    #def update(name,address,phone_number,services,availability):
+        #pass
+
+#    def view_appointmant():
+#        """
+ #       This function is used to display all the appointments of a particular clinic.
+#        It takes one argument i.e., clinic_id and returns None.
+#        """
+#        def view_appointments_by_clinic(clinic_id):
+#            cur.execute('''SELECT a.*, u.full_name 
+ #                          FROM appointments AS a
+ #                          JOIN users AS u ON u.id = a.doctor_id 
+ #                          WHERE a.clinic_id = ? 
+#                           ORDER BY a.date ASC''', (clinic_id,))
+ #           appointments = cur.fetchall()
+  #          for appointment in appointments:
+#                print(appointment)
+ #               # If no arguments are passed then it will show all the appointments from all the clinic
+#        def view_appointments():
+ #           cur.execute('''SELECT a.*, u.full_name 
+ #                           FROM appointments AS a
+ #                           JOIN users AS u ON u.id = a.doctor_id 
+ #                           ORDER BY a.date ASC''')
+ #           appointments = cur.fetchall()
+ #           for appointment in appointments:
+#                print(appointment)
+                        
+    @classmethod
+    def fetch_slots_data(cls):
+        # Fetch data from the /slots endpoint of your app
+        app_url = 'http://127.0.0.1:5000'  # Update this with the actual URL of your app
+        response = requests.get(f'{app_url}/slots')
+
+        if response.status_code == 200:
+            slots_data = response.json()
+            return slots_data
+        else:
+            print(f"Failed to fetch slots data. Status Code: {response.status_code}")
+            return {}
+
+    @classmethod
+    def update_clinic_availability_from_api(cls):
+        slots_data = cls.fetch_slots_data()
+
+        for clinic_id, availability in slots_data.items():
+            cur.execute('''UPDATE clinics SET availability = ? WHERE id = ?''', (availability, clinic_id))
+
+        conn.commit()
+        print("Clinic availability updated successfully from API.")
+##############################
+
+    @classmethod
+    def view_appointments(cls, clinic_id):
+        
+        cur.execute('''SELECT * FROM queue WHERE clinic_id = ? AND status = 'Booked' ORDER BY datetime''', (clinic_id,))
+        appointments = cur.fetchall()
+
+        if appointments:
+            print("Clinic's booked appointments:")
+            for appointment in appointments:
+                appointment_id, status, datetime_str, user_id, _, appointment_cost = appointment
+                print(f"Appointment ID: {appointment_id}, Status: {status}, DateTime: {datetime_str}, User ID: {user_id}, Cost: {appointment_cost}")
+        else:
+            print("The clinic doesn't have any booked appointments.")
+
+    @classmethod
+    def set_availability(cls, clinic_id, new_availability):
+        cur.execute('''UPDATE clinics SET availability = ? WHERE id = ?''', (new_availability, clinic_id))
+        conn.commit()
+        print("Availability updated successfully.")
+
+    @classmethod
+    def update_clinic_info(cls, clinic_id):
+        
+        cur.execute('''SELECT * FROM clinics WHERE id = ?''', (clinic_id,))
+        existing_clinic = cur.fetchone()
+
+        if existing_clinic:
+            print("1. Update Name\n2. Update Address\n3. Update Phone Number\n4. Update Services")
+            choice = input("Enter your choice (1/2/3/4): ")
+
+            if choice == '1':
+                new_name = input("Enter the new name: ")
+                cur.execute('''UPDATE clinics SET name = ? WHERE id = ?''', (new_name, clinic_id))
+            elif choice == '2':
+                new_address = input("Enter the new address: ")
+                cur.execute('''UPDATE clinics SET address = ? WHERE id = ?''', (new_address, clinic_id))
+            elif choice == '3':
+                new_phone_number = input("Enter the new phone number: ")
+                cur.execute('''UPDATE clinics SET phone_number = ? WHERE id = ?''', (new_phone_number, clinic_id))
+            elif choice == '4':
+                new_services = input("Enter the new services (comma-separated): ")
+                cur.execute('''UPDATE clinics SET services = ? WHERE id = ?''', (new_services, clinic_id))
+            else:
+                print("Invalid choice. clinics info update failed.")
+                return
+
+            conn.commit()
+            print("Clinic info update successful.")
+        else:
+            print("Clinic not found. Clinic info update failed.")
+
+
 class Notification:
     def init(self, notification_id, user_id, message, date_sent):
 
