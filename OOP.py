@@ -155,3 +155,44 @@ class Review:
                 print(f"{row[0]}         | {row[1]:.2f}")
         else:
             print("No reviews available.")
+
+class Queueing:
+    def __init__(self, status, datetime, user_id, clinic_id, appointment_id, appointment_cost):
+        self.status = status
+        self.datetime = datetime
+        self.user_id = user_id
+        self.clinic_id = clinic_id
+        self.appointment_id = appointment_id
+        self.appointment_cost = appointment_cost
+
+    @classmethod
+    def book_appointment(cls, user_id, clinic_id, appointment_cost):
+
+        current_datetime = datetime.now()
+        status = 'Booked'
+
+        cur.execute('''INSERT INTO queue (status, datetime, user_id, clinic_id, appointment_cost) 
+                    VALUES (?, ?, ?, ?, ?)''', (status, current_datetime, user_id, clinic_id, appointment_cost))
+        conn.commit()
+        print("Appointment booked successfully.")
+
+    @classmethod
+    def cancel_missed_appointments(cls, user_id):
+
+        status = 'Booked'
+        cur.execute('''UPDATE queue SET status = 'Cancelled' 
+                    WHERE status = ? AND user_id = ? AND datetime < ?''', (status, user_id, datetime.now()))
+        conn.commit()
+        print("Missed appointments cancelled successfully.")
+
+    @classmethod
+    def reschedule_appointment(cls, user_id, clinic_id, new_datetime):
+
+        status = 'Booked'
+        cur.execute('''UPDATE queue SET datetime = ? 
+                    WHERE status = ? AND user_id = ? AND clinic_id = ? AND datetime > ?''',
+                           (new_datetime, status, user_id, clinic_id, datetime.now()))
+        conn.commit()
+        print("Appointment rescheduled successfully.")
+
+
