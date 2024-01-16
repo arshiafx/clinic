@@ -110,4 +110,48 @@ class Notification:
         conn.commit()
         print("Notification sent successfully.")
 
-    
+class Review:
+    def init(self, review_id, user_id, clinic_id, rating, comment, date_of_review):
+        self.review_id = review_id
+        self.user_id = user_id
+        self.clinic_id = clinic_id
+        self.rating = rating
+        self.comment = comment
+        self.date_of_review = date_of_review
+
+    @classmethod
+    def submit_review(cls, user_id, clinic_id, rating, comment):
+
+        current_datetime = datetime.now()
+        cur.execute('''INSERT INTO review (user_id, clinic_id, rating, comment, date_of_review)
+                    VALUES (?, ?, ?, ?, ?)''', (user_id, clinic_id, rating, comment, current_datetime))
+        conn.commit()
+        print("Review submitted successfully.")
+
+    @classmethod
+    def update_review(cls, review_id, new_rating, new_comment):
+        cur.execute('''SELECT date_of_review FROM review WHERE review_id = ?''', (review_id,))
+        review_date = cur.fetchone()
+
+        if review_date and datetime.now() - datetime.strptime(review_date[0], "%Y-%m-%d %H:%M:%S") < timedelta(hours=3):
+            cur.execute('''UPDATE review SET rating = ?, comment = ? WHERE review_id = ?''',
+                        (new_rating, new_comment, review_id))
+            conn.commit()
+            print("Review updated successfully.")
+        else:
+            print("Review update not allowed after 3 hours of submission.")
+
+    @classmethod
+    def generate_average_ratings_table(cls):
+        cur.execute('''SELECT clinic_id, AVG(rating) AS average_rating
+                    FROM review
+                    GROUP BY clinic_id''')
+        result = cur.fetchall()
+
+        if result:
+            print("Clinic ID | Average Rating")
+            print("----------------------------")
+            for row in result:
+                print(f"{row[0]}         | {row[1]:.2f}")
+        else:
+            print("No reviews available.")
