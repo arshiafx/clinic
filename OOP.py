@@ -195,4 +195,38 @@ class Queueing:
         conn.commit()
         print("Appointment rescheduled successfully.")
 
+class Payment:
+    def __init__(self, payment_id, user_id, clinic_id, appointment_id,
+    paid_amount, payment_date, payment_description):
+        self.payment_id = payment_id
+        self.user_id = user_id
+        self.clinic_id = clinic_id
+        self.appointment_id = appointment_id
+        self.paid_amount = paid_amount
+        self.payment_date = payment_date
+        self.payment_description = payment_description
+
+    @classmethod
+    def process_payment(cls, user_id, clinic_id, payment_description):
+
+        cur.execute('''SELECT appointment_id, status, appointment_cost FROM
+        queue
+        WHERE user_id = ? AND clinic_id = ? AND status IN
+        ('Booked', 'Rescheduled')
+        ORDER BY datetime DESC LIMIT 1''', (user_id, clinic_id))
+        appointment_details = cur.fetchone()
+
+        if appointment_details:
+        appointment_id, status, appointment_cost = appointment_details
+        paid_amount = appointment_cost if status == 'Booked' else 0.0
+        payment_date = datetime.now()
+        conn.execute('''INSERT INTO payment (user_id, clinic_id,
+        appointment_id, paid_amount, payment_date, payment_description)
+        VALUES (?, ?, ?, ?, ?, ?)''', (user_id, clinic_id,
+        appointment_id, paid_amount, payment_date, payment_description))
+        conn.commit()
+        print("Payment processed successfully.")
+        else:
+        print("No eligible appointment found for payment.")
+
 
