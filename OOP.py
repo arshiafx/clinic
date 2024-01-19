@@ -3,6 +3,7 @@ import requests
 import datetime
 import secrets
 import string
+from datetime import timedelta
 
 
 conn = sql.connect(r'D:\AP\project\clinic\main.db')
