@@ -363,6 +363,7 @@ class Review:
             print("No reviews available.")
 
 class Queueing:
+    global status , clinic_ids
     def __init__(self, status, datetime, user_id, clinic_id, appointment_id, appointment_cost):
         self.status = status
         self.datetime = datetime
@@ -372,34 +373,53 @@ class Queueing:
         self.appointment_cost = appointment_cost
 
     @classmethod
-    def book_appointment(cls, user_id, clinic_id, appointment_cost):
+    def book_appointment(cls,user_id, clinic_id):
 
-        current_datetime = datetime.now()
-        status = 'Booked'
+        current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        Appointment_status = 'Booked'
 
-        cur.execute('''INSERT INTO queue (status, datetime, user_id, clinic_id, appointment_cost) 
-                    VALUES (?, ?, ?, ?, ?)''', (status, current_datetime, user_id, clinic_id, appointment_cost))
+        cur.execute('''INSERT INTO queue VALUES (?, ?, ?, ?, ?, ?)''', (None, Appointment_status, current_datetime, user_id, int(clinic_id), None))
+        conn.commit()
+        cur.execute('''select availability from clinics where clinic_id = ?''',(int(clinic_id),))
+        result = cur.fetchall()
+        new_availability = result[0] - 1
+        cur.execute('''UPDATE clinics SET availability = ? 
+                    where clinic_id = ?''',(new_availability, int(clinic_id)))
         conn.commit()
         print("Appointment booked successfully.")
+    
+    @classmethod
+    def cancelled_appointment(cls,clinic_id):
+        global clinic_ids
+        Appointment_status = 'Booked'
+        if int(clinic_id) in clinic_ids:
+            cur.execute('''UPDATE queue SET status = 'Cancelled' 
+                        where appointment_id = ? and status = ?''',(int(clinic_id), Appointment_status))
+            conn.commit()
+            print('The appointment has been cancelled')
+        else:
+            print('Wrong input')
 
     @classmethod
-    def cancel_missed_appointments(cls, user_id):
+    def missed_appointments(cls, user_id):
 
-        status = 'Booked'
-        cur.execute('''UPDATE queue SET status = 'Cancelled' 
-                    WHERE status = ? AND user_id = ? AND datetime < ?''', (status, user_id, datetime.now()))
+        Appointment_status = 'Booked'
+        cur.execute('''UPDATE queue SET status = 'Missed' 
+                    WHERE status = ? AND user_id = ? AND datetime != ?''', 
+                    (Appointment_status, user_id, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
         conn.commit()
         print("Missed appointments cancelled successfully.")
 
     @classmethod
-    def reschedule_appointment(cls, user_id, clinic_id, new_datetime):
-
-        status = 'Booked'
+    def reschedule_appointment(cls, user_id, clinic_id):
+        Appointment_status = 'Booked'
+        new_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         cur.execute('''UPDATE queue SET datetime = ? 
                     WHERE status = ? AND user_id = ? AND clinic_id = ? AND datetime > ?''',
-                           (new_datetime, status, user_id, clinic_id, datetime.now()))
+                           (new_datetime, Appointment_status, user_id, clinic_id, datetime.now()))
         conn.commit()
         print("Appointment rescheduled successfully.")
+
 
 class Payment:
     def __init__(self, payment_id, user_id, clinic_id, appointment_id,
