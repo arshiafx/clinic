@@ -420,7 +420,6 @@ class Queueing:
         conn.commit()
         print("Appointment rescheduled successfully.")
 
-
 class Payment:
     def __init__(self, payment_id, user_id, clinic_id, appointment_id,
     paid_amount, payment_date, payment_description):
@@ -454,4 +453,3 @@ class Payment:
             print("Payment processed successfully.")
         else:
             print("No eligible appointment found for payment.")
-
