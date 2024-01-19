@@ -299,9 +299,8 @@ class clinic:
         conn.commit()
         print("Appointment marked as finished successfully.")
 
-
 class Notification:
-    def init(self, notification_id, user_id, message, date_sent):
+    def __init__(self, notification_id, user_id, message, date_sent):
 
         self.notification_id = notification_id
         self.user_id = user_id
@@ -310,8 +309,8 @@ class Notification:
 
     @classmethod
     def send_notification(cls, user_id, message):
-        date_sent = datetime.now()
-        cur.execute('''INSERT INTO notification (user_id, message, date_sent)
+        date_sent = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        cur.execute('''INSERT INTO notification (user_id, message, date_sent) 
                               VALUES (?, ?, ?)''', (user_id, message, date_sent))
         conn.commit()
         print("Notification sent successfully.")
