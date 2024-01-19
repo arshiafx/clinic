@@ -210,40 +210,13 @@ class clinic:
             conn.commit()
             print("clinic created successfully")
             return True  
-          
-    #def update(name,address,phone_number,services,availability):
-        #pass
 
-#    def view_appointmant():
-#        """
- #       This function is used to display all the appointments of a particular clinic.
-#        It takes one argument i.e., clinic_id and returns None.
-#        """
-#        def view_appointments_by_clinic(clinic_id):
-#            cur.execute('''SELECT a.*, u.full_name 
- #                          FROM appointments AS a
- #                          JOIN users AS u ON u.id = a.doctor_id 
- #                          WHERE a.clinic_id = ? 
-#                           ORDER BY a.date ASC''', (clinic_id,))
- #           appointments = cur.fetchall()
-  #          for appointment in appointments:
-#                print(appointment)
- #               # If no arguments are passed then it will show all the appointments from all the clinic
-#        def view_appointments():
- #           cur.execute('''SELECT a.*, u.full_name 
- #                           FROM appointments AS a
- #                           JOIN users AS u ON u.id = a.doctor_id 
- #                           ORDER BY a.date ASC''')
- #           appointments = cur.fetchall()
- #           for appointment in appointments:
-#                print(appointment)
-                        
     @classmethod
     def fetch_slots_data(cls):
         # Fetch data from the /slots endpoint of your app
         app_url = 'http://127.0.0.1:5000'  # Update this with the actual URL of your app
         response = requests.get(f'{app_url}/slots')
-
+        
         if response.status_code == 200:
             slots_data = response.json()
             return slots_data
@@ -256,25 +229,30 @@ class clinic:
         slots_data = cls.fetch_slots_data()
 
         for clinic_id, availability in slots_data.items():
-            cur.execute('''UPDATE clinics SET availability = ? WHERE id = ?''', (availability, clinic_id))
+            cur.execute('''Insert into clinics values(?,?,?,?,?,?)''', (clinic_id,None,None,None,None, availability))
 
         conn.commit()
         print("Clinic availability updated successfully from API.")
-##############################
 
-    @classmethod
-    def view_appointments(cls, clinic_id):
-        
-        cur.execute('''SELECT * FROM queue WHERE clinic_id = ? AND status = 'Booked' ORDER BY datetime''', (clinic_id,))
-        appointments = cur.fetchall()
-
-        if appointments:
-            print("Clinic's booked appointments:")
-            for appointment in appointments:
-                appointment_id, status, datetime_str, user_id, _, appointment_cost = appointment
-                print(f"Appointment ID: {appointment_id}, Status: {status}, DateTime: {datetime_str}, User ID: {user_id}, Cost: {appointment_cost}")
-        else:
+    @classmethod  
+    def view_appointments(cls,clinic_id):
+        global option
+        cur.execute('''select appointment_id, user_id, datetime, appointment_cost from queue where clinic_id = ? and status = 'Boocked' ''', (clinic_id,))
+        result = cur.fetchall()
+        if result == []:
             print("The clinic doesn't have any booked appointments.")
+            option = 0
+        else:
+            for row in result:
+                appointment_id, user_id, datetime_str, appointment_cost = row
+
+                cur.execute('select name from users where id = ?', (user_id,))
+                result2 = cur.fetchone()
+
+                if result2:
+                    user_name = result2[0]            
+                    print(f"Appointment: {appointment_id}  {user_name} {datetime_str} {appointment_cost}")
+            option = 1
 
     @classmethod
     def set_availability(cls, clinic_id, new_availability):
@@ -309,9 +287,17 @@ class clinic:
                 return
 
             conn.commit()
-            print("Clinic info update successful.")
+            print("Clinic info updated successful.")
         else:
             print("Clinic not found. Clinic info update failed.")
+    
+    @classmethod  
+    def set_appointment_finished(cls, appointment_id):
+        finished_status = 'Finished'
+        cur.execute('''UPDATE queue SET status = ? 
+                WHERE appointment_id = ?''', (finished_status, appointment_id))
+        conn.commit()
+        print("Appointment marked as finished successfully.")
 
 
 class Notification:
