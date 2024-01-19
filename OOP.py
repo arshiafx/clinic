@@ -1,6 +1,9 @@
 import sqlite3 as sql
 import requests
 import datetime
+import secrets
+import string
+
 
 conn = sql.connect(r'D:\AP\project\clinic\main.db')
 cur = conn.cursor()
@@ -61,49 +64,72 @@ cur.executemany("INSERT INTO clinics VALUES(?, ?, ?, ?, ?, ?);", clinics_data)
 conn.commit()
 
 class users:
-    global cur
-    
-    def __init__(self,user_id,full_name,email,password,role):
+    global cur, status
+    def __init__(self,user_id,full_name,email,password,role,status):
         self.user_id   = user_id
         self.full_name = full_name
         self.email     = email
         self.password  = password
         self.role      = role
+        self.status      = status
         
-    def sign_up(user_id,full_name,email,password,role):      
-        #check if user exists or not
+    def sign_up(user_id,full_name,email,password,role,status):      
         cur.execute('''SELECT email FROM users;''')
         conn.commit
         emails = [email[0] for email in cur.fetchall()]
         if email in emails:
             print("user already exists")
             return False
-        
-        #if user doesn't exist we sign them up
         else:
-            cur.execute('''INSERT INTO users(
+            insert_text=('''INSERT INTO users(
                         id,
                         name,
                         email,
                         password,
-                        role
+                        role,
                         status) 
-                        VALUES(?,?,?,?,?);''',(user_id,full_name,email,password,role,0))
+                        VALUES(?,?,?,?,?,?);''')
+                        
+            data =  (user_id,full_name,email,password,role,0)
+            cur.execute(insert_text,data)            
             conn.commit()
             print("user created successfully")
             return True
 
-    def login(email,password):
+    def login(email,password_type):
+        global status, logged_in_user
         cur.execute('''SELECT password FROM users WHERE email = ?''', (email,))
         passwords = [row[0] for row in cur.fetchall()]
-        if password in passwords:
-            # Password matched, proceed with login
-            cur.execute('''UPDATE users SET status = 1 WHERE email = ?''',(email,))
-            conn.commit()
-            print('login was succesful')
-        else:
-            # Password did not match
-            print('Password did not match')
+        if password_type == "password":
+            password = input("please enter your password: ")
+            if password in passwords:
+                cur.execute('''UPDATE users SET status = 1 WHERE email = ?''',(email,))
+                conn.commit()
+                print('login was succesful')
+                status = "1"
+                logged_in_user = email
+            else:
+                print('Password or email are wrong.')        
+        elif password_type.lower() == ["otp" or "One-Time Password"]:
+            def generate_password():
+                # Define the characters to use in the password
+                characters = string.ascii_letters + string.digits
+
+            # Generate a random seven-character password
+                password = ''.join(secrets.choice(characters) for _ in range(7))
+
+                return password
+
+            otp = generate_password()
+            print("Your One-Time Password:", otp)
+            ask_otp = input("please enter your OTP: ")
+            if otp == ask_otp:
+                print('login was succesful')
+                status = "1"
+                logged_in_user = email
+                del otp
+            else:
+                print("otp is wrong.")
 
     def update(full_name,email,password,role):
         values=[]
@@ -118,10 +144,12 @@ class users:
         return 'Profile updated Successfully!'
     
     def logout(email):
+        global status
         cur.execute('''UPDATE users SET status = 0 WHERE email = ?''',(email,))
         conn.commit()
-        print('User logged out')
-        
+        print('You have been logged out')
+        status == "0"
+    
     def get_info():
         user_data=cur.fetchone()
         data={}
@@ -132,9 +160,25 @@ class users:
         return data
     
     def view_appointmant():
-        cur.execute("""select a.*,u.full_name from appointments as a
-                    join users u on u.id=a.doctor_id where a.patient
-                    =? order by date asc """,(users.get_info()["email"],))
+        global status
+        cur.execute("SELECT id FROM users WHERE email = ? ", (logged_in_user,))
+        result = cur.fetchone()
+        if status == "11":
+            cur.execute("SELECT * FROM queue WHERE user_id = ? AND status = 'Booked' ", (result[0],))
+            result = cur.fetchall()
+            if result == []:
+                print('There are no reserved appointments for you')
+            else:
+                for i in result:
+                    print(i)
+        elif status == "12":
+            cur.execute("SELECT * FROM queue WHERE user_id = ? AND status = 'Finished' ", (result[0],))
+            result = cur.fetchall()
+            if result == []:
+                print('You have not finished any of your appointments')
+            else:
+                for i in result:
+                    print(i)
 
 class clinic:
     def __init__(self,clinic_id,name,address,phone_number,services,availability):
