@@ -7,17 +7,57 @@ cur = conn.cursor()
 
 # Create table if it doesn't exist already
 cur.execute('''CREATE TABLE IF NOT EXISTS users(
-            id INTEGER PRIMARY KEY, 
+            id integer PRIMARY KEY autoincrement, 
             name TEXT, 
             email TEXT, 
             password TEXT, 
             role TEXT,
             status INTEGER);
         ''')
+cur.execute('''CREATE TABLE IF NOT EXISTS clinics(
+            id integer PRIMARY KEY Autoincrement Not Null,
+            name TEXT,
+            address TEXT,
+            phone_number TEXT,
+            services TEXT,
+            availability Integer not null);''' )
 
-cur.execute('DELETE FROM users;')    
-users = [(10,'arshia','arshia@gmail.com','Salam0011','patient',0),(20,'parsa','parsa@gmail.com','strong','patient',0),(30,'arash','arash@','password','staff',0),(40,'mamad','@gmail.com','be to che','pashent',0),(50,'sadra','sadra@gmail.com','ramz','staff',0)]
-cur.executemany("INSERT INTO users VALUES(?, ?, ?, ?, ?, ?);", users)
+cur.execute('''CREATE TABLE IF NOT EXISTS queue(
+            appointment_id integer PRIMARY KEY AUTOINCREMENT NOT NULL, 
+            status VARCHAR(20) NOT NULL, 
+            datetime text NOT NULL, 
+            user_id INTEGER NOT NULL, 
+            clinic_id INTEGER NOT NULL, 
+            appointment_cost Integer);''')
+
+cur.execute('''CREATE TABLE IF NOT EXISTS notification(
+            notification_id integer PRIMARY KEY AUTOINCREMENT NOT NULL, 
+            user_id INTEGER NOT NULL, 
+            message TEXT NOT NULL, 
+            date_sent VARCHAR(20) NOT NULL, 
+            FOREIGN KEY(user_id) REFERENCES users(id))''')
+
+cur.execute('''CREATE TABLE IF NOT EXISTS payment(
+            payment_id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+            user_id INTEGER NOT NULL,
+            clinic_id INTEGER NOT NULL,
+            appointment_id INTEGER NOT NULL,
+            paid_amount REAL NOT NULL,
+            payment_date VARCHAR(20) NOT NULL,
+            payment_description TEXT,
+            FOREIGN KEY(user_id) REFERENCES users(id),
+            FOREIGN KEY(clinic_id) REFERENCES clinic(id),
+            FOREIGN KEY(appointment_id) REFERENCES queue(appointment_id))''')
+
+
+cur.execute('DELETE FROM users;')  
+user_data = [(None,'arshia','arshia@gmail.com','Salam0011','user',0),(None,'parsa','parsa@gmail.com','strong','user',0),(None,'arash','arash@','password','employee',0),(None,'mamad','@gmail.com','be to che','user',0),(None,'sadra','sadra@gmail.com','ramz','employee',0),(None,'aa','aa','aa','user',0)]
+cur.executemany("INSERT INTO users VALUES(?, ?, ?, ?, ?, ?);", user_data)
+conn.commit()
+
+cur.execute('DELETE FROM clinics;')  
+clinics_data = [(None,'arshia','arshia@gmail.com','Salam0011','user',1),(None,'parsa','parsa@gmail.com','strong','user',1),(None,'arash','arash@','password','employee',1),(None,'mamad','@gmail.com','be to che','user',1),(None,'sadra','sadra@gmail.com','ramz','employee',1),(None,'aa','aa','aa','user',1)]
+cur.executemany("INSERT INTO clinics VALUES(?, ?, ?, ?, ?, ?);", clinics_data)
 conn.commit()
 
 class users:
