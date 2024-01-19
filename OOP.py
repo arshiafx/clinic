@@ -1,137 +1,69 @@
 import sqlite3 as sql
 import requests
-import json
-from datetime import datetime, timedelta
-import secrets
-import string
+import datetime
 
-
-
-#data = requests.get('http://127.0.0.1:5000/slots')
-
-conn = sql.connect(r'database.db')
+conn = sql.connect(r'D:\AP\project\clinic\main.db')
 cur = conn.cursor()
+
+# Create table if it doesn't exist already
 cur.execute('''CREATE TABLE IF NOT EXISTS users(
-            id integer PRIMARY KEY autoincrement, 
+            id INTEGER PRIMARY KEY, 
             name TEXT, 
             email TEXT, 
             password TEXT, 
             role TEXT,
             status INTEGER);
         ''')
-cur.execute('''CREATE TABLE IF NOT EXISTS clinics(
-            id integer PRIMARY KEY Autoincrement Not Null,
-            name TEXT,
-            address TEXT,
-            phone_number TEXT,
-            services TEXT,
-            availability Integer not null);''' )
 
-cur.execute('''CREATE TABLE IF NOT EXISTS queue(
-            appointment_id integer PRIMARY KEY AUTOINCREMENT NOT NULL, 
-            status VARCHAR(20) NOT NULL, 
-            datetime text NOT NULL, 
-            user_id INTEGER NOT NULL, 
-            clinic_id INTEGER NOT NULL, 
-            appointment_cost Integer);''')
-
-cur.execute('''CREATE TABLE IF NOT EXISTS notification(
-            notification_id integer PRIMARY KEY AUTOINCREMENT NOT NULL, 
-            user_id INTEGER NOT NULL, 
-            message TEXT NOT NULL, 
-            date_sent VARCHAR(20) NOT NULL, 
-            FOREIGN KEY(user_id) REFERENCES users(id))''')
-
-cur.execute('''CREATE TABLE IF NOT EXISTS payment(
-            payment_id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-            user_id INTEGER NOT NULL,
-            clinic_id INTEGER NOT NULL,
-            appointment_id INTEGER NOT NULL,
-            paid_amount REAL NOT NULL,
-            payment_date VARCHAR(20) NOT NULL,
-            payment_description TEXT,
-            FOREIGN KEY(user_id) REFERENCES users(id),
-            FOREIGN KEY(clinic_id) REFERENCES clinic(id),
-            FOREIGN KEY(appointment_id) REFERENCES queue(appointment_id))''')
-
-
-cur.execute('DELETE FROM users;')  
-user_data = [(None,'arshia','arshia@gmail.com','Salam0011','user',0),(None,'parsa','parsa@gmail.com','strong','user',0),(None,'arash','arash@','password','employee',0),(None,'mamad','@gmail.com','be to che','user',0),(None,'sadra','sadra@gmail.com','ramz','employee',0),(None,'aa','aa','aa','user',0)]
-cur.executemany("INSERT INTO users VALUES(?, ?, ?, ?, ?, ?);", user_data)
-conn.commit()
-
-cur.execute('DELETE FROM clinics;')  
-clinics_data = [(None,'arshia','arshia@gmail.com','Salam0011','user',1),(None,'parsa','parsa@gmail.com','strong','user',1),(None,'arash','arash@','password','employee',1),(None,'mamad','@gmail.com','be to che','user',1),(None,'sadra','sadra@gmail.com','ramz','employee',1),(None,'aa','aa','aa','user',1)]
-cur.executemany("INSERT INTO clinics VALUES(?, ?, ?, ?, ?, ?);", clinics_data)
+cur.execute('DELETE FROM users;')    
+users = [(10,'arshia','arshia@gmail.com','Salam0011','patient',0),(20,'parsa','parsa@gmail.com','strong','patient',0),(30,'arash','arash@','password','staff',0),(40,'mamad','@gmail.com','be to che','pashent',0),(50,'sadra','sadra@gmail.com','ramz','staff',0)]
+cur.executemany("INSERT INTO users VALUES(?, ?, ?, ?, ?, ?);", users)
 conn.commit()
 
 class users:
-    global cur, status
-    def __init__(self,user_id,full_name,email,password,role,status):
+    global cur
+    
+    def __init__(self,user_id,full_name,email,password,role):
         self.user_id   = user_id
         self.full_name = full_name
         self.email     = email
         self.password  = password
         self.role      = role
-        self.status      = status
         
-    def sign_up(user_id,full_name,email,password,role,status):      
+    def sign_up(user_id,full_name,email,password,role):      
+        #check if user exists or not
         cur.execute('''SELECT email FROM users;''')
         conn.commit
         emails = [email[0] for email in cur.fetchall()]
         if email in emails:
             print("user already exists")
             return False
+        
+        #if user doesn't exist we sign them up
         else:
-            insert_text=('''INSERT INTO users(
+            cur.execute('''INSERT INTO users(
                         id,
                         name,
                         email,
                         password,
-                        role,
+                        role
                         status) 
-                        VALUES(?,?,?,?,?,?);''')
-                        
-            data =  (user_id,full_name,email,password,role,0)
-            cur.execute(insert_text,data)            
+                        VALUES(?,?,?,?,?);''',(user_id,full_name,email,password,role,0))
             conn.commit()
             print("user created successfully")
             return True
 
-    def login(email,password_type):
-        global status, logged_in_user
+    def login(email,password):
         cur.execute('''SELECT password FROM users WHERE email = ?''', (email,))
         passwords = [row[0] for row in cur.fetchall()]
-        if password_type == "password":
-            password = input("please enter your password: ")
-            if password in passwords:
-                cur.execute('''UPDATE users SET status = 1 WHERE email = ?''',(email,))
-                conn.commit()
-                print('login was succesful')
-                status = "1"
-                logged_in_user = email
-            else:
-                print('Password or email are wrong.')        
-        elif password_type.lower() == ["otp" or "One-Time Password"]:
-            def generate_password():
-                # Define the characters to use in the password
-                characters = string.ascii_letters + string.digits
-
-            # Generate a random seven-character password
-                password = ''.join(secrets.choice(characters) for _ in range(7))
-
-                return password
-
-            otp = generate_password()
-            print("Your One-Time Password:", otp)
-            ask_otp = input("please enter your OTP: ")
-            if otp == ask_otp:
-                print('login was succesful')
-                status = "1"
-                logged_in_user = email
-                del otp
-            else:
-                print("otp is wrong.")
+        if password in passwords:
+            # Password matched, proceed with login
+            cur.execute('''UPDATE users SET status = 1 WHERE email = ?''',(email,))
+            conn.commit()
+            print('login was succesful')
+        else:
+            # Password did not match
+            print('Password did not match')
 
     def update(full_name,email,password,role):
         values=[]
@@ -146,12 +78,10 @@ class users:
         return 'Profile updated Successfully!'
     
     def logout(email):
-        global status
         cur.execute('''UPDATE users SET status = 0 WHERE email = ?''',(email,))
         conn.commit()
-        print('You have been logged out')
-        status == "0"
-    
+        print('User logged out')
+        
     def get_info():
         user_data=cur.fetchone()
         data={}
@@ -162,26 +92,10 @@ class users:
         return data
     
     def view_appointmant():
-        global status
-        cur.execute("SELECT id FROM users WHERE email = ? ", (logged_in_user,))
-        result = cur.fetchone()
-        if status == "11":
-            cur.execute("SELECT * FROM queue WHERE user_id = ? AND status = 'Booked' ", (result[0],))
-            result = cur.fetchall()
-            if result == []:
-                print('There are no reserved appointments for you')
-            else:
-                for i in result:
-                    print(i)
-        elif status == "12":
-            cur.execute("SELECT * FROM queue WHERE user_id = ? AND status = 'Finished' ", (result[0],))
-            result = cur.fetchall()
-            if result == []:
-                print('You have not finished any of your appointments')
-            else:
-                for i in result:
-                    print(i)
-        
+        cur.execute("""select a.*,u.full_name from appointments as a
+                    join users u on u.id=a.doctor_id where a.patient
+                    =? order by date asc """,(users.get_info()["email"],))
+
 class clinic:
     def __init__(self,clinic_id,name,address,phone_number,services,availability):
         self.clinic_id    = clinic_id
@@ -213,16 +127,39 @@ class clinic:
             print("clinic created successfully")
             return True  
           
-    def update(name,address,phone_number,services,availability):
-        pass
+    #def update(name,address,phone_number,services,availability):
+        #pass
+
+#    def view_appointmant():
+#        """
+ #       This function is used to display all the appointments of a particular clinic.
+#        It takes one argument i.e., clinic_id and returns None.
+#        """
+#        def view_appointments_by_clinic(clinic_id):
+#            cur.execute('''SELECT a.*, u.full_name 
+ #                          FROM appointments AS a
+ #                          JOIN users AS u ON u.id = a.doctor_id 
+ #                          WHERE a.clinic_id = ? 
+#                           ORDER BY a.date ASC''', (clinic_id,))
+ #           appointments = cur.fetchall()
+  #          for appointment in appointments:
+#                print(appointment)
+ #               # If no arguments are passed then it will show all the appointments from all the clinic
+#        def view_appointments():
+ #           cur.execute('''SELECT a.*, u.full_name 
+ #                           FROM appointments AS a
+ #                           JOIN users AS u ON u.id = a.doctor_id 
+ #                           ORDER BY a.date ASC''')
+ #           appointments = cur.fetchall()
+ #           for appointment in appointments:
+#                print(appointment)
                         
     @classmethod
     def fetch_slots_data(cls):
         # Fetch data from the /slots endpoint of your app
         app_url = 'http://127.0.0.1:5000'  # Update this with the actual URL of your app
         response = requests.get(f'{app_url}/slots')
-        data = response.json()
-        
+
         if response.status_code == 200:
             slots_data = response.json()
             return slots_data
@@ -235,8 +172,8 @@ class clinic:
         slots_data = cls.fetch_slots_data()
 
         for clinic_id, availability in slots_data.items():
-            cur.execute('''INSERT INTO clinics VALUES(?,?,?,?,?,?)''', (clinic_id,None,None,None,None, availability))
-            
+            cur.execute('''UPDATE clinics SET availability = ? WHERE id = ?''', (availability, clinic_id))
+
         conn.commit()
         print("Clinic availability updated successfully from API.")
 ##############################
@@ -292,8 +229,9 @@ class clinic:
         else:
             print("Clinic not found. Clinic info update failed.")
 
+
 class Notification:
-    def __init__(self, notification_id, user_id, message, date_sent):
+    def init(self, notification_id, user_id, message, date_sent):
 
         self.notification_id = notification_id
         self.user_id = user_id
@@ -303,39 +241,56 @@ class Notification:
     @classmethod
     def send_notification(cls, user_id, message):
         date_sent = datetime.now()
-        cur.execute('''INSERT INTO notification (user_id, message, date_sent) 
+        cur.execute('''INSERT INTO notification (user_id, message, date_sent)
                               VALUES (?, ?, ?)''', (user_id, message, date_sent))
         conn.commit()
         print("Notification sent successfully.")
 
-class Payment:
-    def __init__(self, payment_id, user_id, clinic_id, appointment_id, paid_amount, payment_date, payment_description):
-        self.payment_id = payment_id
+class Review:
+    def init(self, review_id, user_id, clinic_id, rating, comment, date_of_review):
+        self.review_id = review_id
         self.user_id = user_id
         self.clinic_id = clinic_id
-        self.appointment_id = appointment_id
-        self.paid_amount = paid_amount
-        self.payment_date = payment_date
-        self.payment_description = payment_description
+        self.rating = rating
+        self.comment = comment
+        self.date_of_review = date_of_review
 
     @classmethod
-    def process_payment(cls, user_id, clinic_id, payment_description):
-    
-        cur.execute('''SELECT appointment_id, status, appointment_cost FROM queue 
-                    WHERE user_id = ? AND clinic_id = ? AND status IN ('Booked', 'Rescheduled') 
-                    ORDER BY datetime DESC LIMIT 1''', (user_id, clinic_id))
-        appointment_details = cur.fetchone()
+    def submit_review(cls, user_id, clinic_id, rating, comment):
 
-        if appointment_details:
-            appointment_id, status, appointment_cost = appointment_details
-            paid_amount = appointment_cost if status == 'Booked' else 0.0
-            payment_date = datetime.now()
-            conn.execute('''INSERT INTO payment (user_id, clinic_id, appointment_id, paid_amount, payment_date, payment_description)
-                        VALUES (?, ?, ?, ?, ?, ?)''', (user_id, clinic_id, appointment_id, paid_amount, payment_date, payment_description))
+        current_datetime = datetime.now()
+        cur.execute('''INSERT INTO review (user_id, clinic_id, rating, comment, date_of_review)
+                    VALUES (?, ?, ?, ?, ?)''', (user_id, clinic_id, rating, comment, current_datetime))
+        conn.commit()
+        print("Review submitted successfully.")
+
+    @classmethod
+    def update_review(cls, review_id, new_rating, new_comment):
+        cur.execute('''SELECT date_of_review FROM review WHERE review_id = ?''', (review_id,))
+        review_date = cur.fetchone()
+
+        if review_date and datetime.now() - datetime.strptime(review_date[0], "%Y-%m-%d %H:%M:%S") < timedelta(hours=3):
+            cur.execute('''UPDATE review SET rating = ?, comment = ? WHERE review_id = ?''',
+                        (new_rating, new_comment, review_id))
             conn.commit()
-            print("Payment processed successfully.")
+            print("Review updated successfully.")
         else:
-            print("No eligible appointment found for payment.")
+            print("Review update not allowed after 3 hours of submission.")
+
+    @classmethod
+    def generate_average_ratings_table(cls):
+        cur.execute('''SELECT clinic_id, AVG(rating) AS average_rating
+                    FROM review
+                    GROUP BY clinic_id''')
+        result = cur.fetchall()
+
+        if result:
+            print("Clinic ID | Average Rating")
+            print("----------------------------")
+            for row in result:
+                print(f"{row[0]}         | {row[1]:.2f}")
+        else:
+            print("No reviews available.")
 
 class Queueing:
     def __init__(self, status, datetime, user_id, clinic_id, appointment_id, appointment_cost):
@@ -376,50 +331,37 @@ class Queueing:
         conn.commit()
         print("Appointment rescheduled successfully.")
 
-class Review:
-    def __init__(self, review_id, user_id, clinic_id, rating, comment, date_of_review):
-        self.review_id = review_id
+class Payment:
+    def __init__(self, payment_id, user_id, clinic_id, appointment_id,
+    paid_amount, payment_date, payment_description):
+        self.payment_id = payment_id
         self.user_id = user_id
         self.clinic_id = clinic_id
-        self.rating = rating
-        self.comment = comment
-        self.date_of_review = date_of_review
+        self.appointment_id = appointment_id
+        self.paid_amount = paid_amount
+        self.payment_date = payment_date
+        self.payment_description = payment_description
 
     @classmethod
-    def submit_review(cls, user_id, clinic_id, rating, comment):
+    def process_payment(cls, user_id, clinic_id, payment_description):
 
-        current_datetime = datetime.now()
-        cur.execute('''INSERT INTO review (user_id, clinic_id, rating, comment, date_of_review)
-                    VALUES (?, ?, ?, ?, ?)''', (user_id, clinic_id, rating, comment, current_datetime))
-        conn.commit()
-        print("Review submitted successfully.")
+        cur.execute('''SELECT appointment_id, status, appointment_cost FROM
+        queue
+        WHERE user_id = ? AND clinic_id = ? AND status IN
+        ('Booked', 'Rescheduled')
+        ORDER BY datetime DESC LIMIT 1''', (user_id, clinic_id))
+        appointment_details = cur.fetchone()
 
-    @classmethod
-    def update_review(cls, review_id, new_rating, new_comment):
-        cur.execute('''SELECT date_of_review FROM review WHERE review_id = ?''', (review_id,))
-        review_date = cur.fetchone()
-
-        if review_date and datetime.now() - datetime.strptime(review_date[0], "%Y-%m-%d %H:%M:%S") < timedelta(hours=3):
-            cur.execute('''UPDATE review SET rating = ?, comment = ? WHERE review_id = ?''',
-                            (new_rating, new_comment, review_id))
+        if appointment_details:
+            appointment_id, status, appointment_cost = appointment_details
+            paid_amount = appointment_cost if status == 'Booked' else 0.0
+            payment_date = datetime.now()
+            conn.execute('''INSERT INTO payment (user_id, clinic_id,
+            appointment_id, paid_amount, payment_date, payment_description)
+            VALUES (?, ?, ?, ?, ?, ?)''', (user_id, clinic_id,
+            appointment_id, paid_amount, payment_date, payment_description))
             conn.commit()
-            print("Review updated successfully.")
+            print("Payment processed successfully.")
         else:
-            print("Review update not allowed after 3 hours of submission.")
+            print("No eligible appointment found for payment.")
 
-    @classmethod
-    def generate_average_ratings_table(cls):
-        cur.execute('''SELECT clinic_id, AVG(rating) AS average_rating
-                    FROM review
-                    GROUP BY clinic_id''')
-        result = cur.fetchall()
-            
-        if result:
-            print("Clinic ID | Average Rating")
-            print("----------------------------")
-            for row in result:
-                print(f"{row[0]}         | {row[1]:.2f}")
-        else:
-            print("No reviews available.")
-
-clinic.update_clinic_availability_from_api()
