@@ -53,6 +53,15 @@ cur.execute('''CREATE TABLE IF NOT EXISTS payment(
             FOREIGN KEY(clinic_id) REFERENCES clinic(id),
             FOREIGN KEY(appointment_id) REFERENCES queue(appointment_id))''')
 
+cur.execute('''CREATE TABLE IF NOT EXISTS review(
+            review_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            user_id INTEGER NOT NULL,
+            clinic_id INTEGER NOT NULL,
+            rating INTEGER NOT NULL,
+            comment TEXT,
+            date_of_review DATETIME NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES user(user_id),
+            FOREIGN KEY(clinic_id) REFERENCES clinic(clinic_id))''')
 
 cur.execute('DELETE FROM users;')  
 user_data = [(None,'arshia','arshia@gmail.com','Salam0011','user',0),(None,'parsa','parsa@gmail.com','strong','user',0),(None,'arash','arash@','password','employee',0),(None,'mamad','@gmail.com','be to che','user',0),(None,'sadra','sadra@gmail.com','ramz','employee',0),(None,'aa','aa','aa','user',0)]
